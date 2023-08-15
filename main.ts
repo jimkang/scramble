@@ -10,6 +10,7 @@ import { getAudioBufferFromFile } from 'synthskel/tasks/get-audio-buffer-from-fi
 import { renderResultAudio } from './renderers/render-result-audio';
 import { renderScrambled } from './renderers/render-scrambled';
 import { swapSegments } from './tasks/scramble';
+import { concatAudioBuffers } from './tasks/concat-audio-buffers';
 import ContextKeeper from 'audio-context-singleton';
 import { range } from 'd3-array';
 
@@ -26,6 +27,9 @@ var fileInput: HTMLInputElement = document.getElementById(
 var segmentInput: HTMLInputElement = document.getElementById(
   'segment-count-field'
 ) as HTMLInputElement;
+var silenceInput: HTMLInputElement = document.getElementById(
+  'silence-field'
+) as HTMLInputElement;
 var srcAudioBuffer;
 
 (async function go() {
@@ -37,6 +41,7 @@ var srcAudioBuffer;
     defaults: {
       seed: randomId(8),
       segmentCount: 8,
+      silenceSeconds: 8,
     },
     windowObject: window,
   });
@@ -52,7 +57,10 @@ async function onUpdate(
   prob.roll(2);
 
   wireControls(
-    Object.assign({ onFileChange, onSegmentChange, onScramble }, state)
+    Object.assign(
+      { onFileChange, onSegmentChange, onSilenceChange, onScramble },
+      state
+    )
   );
 
   async function onScramble() {
@@ -91,6 +99,15 @@ async function onUpdate(
       );
     }
 
+    audioBuffers.push(
+      concatAudioBuffers({
+        ctx,
+        buffers: audioBuffers,
+        silenceGapLength: state.silenceSeconds as number,
+        reverse: true,
+      })
+    );
+
     renderScrambled({ audioBuffers });
   }
 }
@@ -98,18 +115,25 @@ async function onUpdate(
 function wireControls({
   onFileChange,
   onSegmentChange,
+  onSilenceChange,
   onScramble,
   segmentCount,
+  silenceSeconds,
 }) {
   segmentInput.value = segmentCount;
+  silenceInput.value = silenceSeconds;
 
   on('#file', 'change', onFileChange);
   on('#segment-count-field', 'change', onSegmentChange);
+  on('#silence-field', 'change', onSilenceChange);
   on('#scramble-button', 'click', onScramble);
 }
 
 function onSegmentChange() {
   urlStore.update({ segmentCount: +segmentInput.value });
+}
+function onSilenceChange() {
+  urlStore.update({ silenceSeconds: +silenceInput.value });
 }
 
 async function onFileChange() {
