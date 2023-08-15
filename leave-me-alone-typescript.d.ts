@@ -7,3 +7,5 @@ declare module '@jimkang/url-store';
 declare module 'one-listener-per-element';
 declare module 'd3-array';
 declare module 'd3-ease';
+declare module 'audio-context-singleton';
+declare module './renderers/*';

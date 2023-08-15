@@ -11,6 +11,7 @@ import { renderResultAudio } from './renderers/render-result-audio';
 import { renderScrambled } from './renderers/render-scrambled';
 import { swapSegments } from './tasks/scramble';
 import ContextKeeper from 'audio-context-singleton';
+import { range } from 'd3-array';
 
 var randomId = RandomId();
 var { on } = OLPE();
@@ -25,10 +26,6 @@ var fileInput: HTMLInputElement = document.getElementById(
 var segmentInput: HTMLInputElement = document.getElementById(
   'segment-count-field'
 ) as HTMLInputElement;
-var scrambleCountInput: HTMLInputElement = document.getElementById(
-  'scramble-count-field'
-) as HTMLInputElement;
-var scrambleButton = document.getElementById('scramble-button');
 var srcAudioBuffer;
 
 (async function go() {
@@ -40,7 +37,6 @@ var srcAudioBuffer;
     defaults: {
       seed: randomId(8),
       segmentCount: 8,
-      scrambleRunCount: 8,
     },
     windowObject: window,
   });
@@ -56,10 +52,7 @@ async function onUpdate(
   prob.roll(2);
 
   wireControls(
-    Object.assign(
-      { onFileChange, onSegmentChange, onScrambleChange, onScramble },
-      state
-    )
+    Object.assign({ onFileChange, onSegmentChange, onScramble }, state)
   );
 
   async function onScramble() {
@@ -71,42 +64,52 @@ async function onUpdate(
       getCurrentContext((error, ctx) => (error ? reject(error) : resolve(ctx)))
     );
 
-    var scrambleBuffer = swapSegments({
-      ctx,
-      srcBuffer: srcAudioBuffer,
-      segmentIndexA: 0,
-      segmentIndexB: 1,
-      segmentLengthInSeconds: srcAudioBuffer.duration / state.segmentCount,
-      fadeInLengthAsSegmentPct: 5,
-      fadeOutLengthAsSegmentPct: 5,
-    });
+    var shuffledIndexes = prob.shuffle(range(state.segmentCount));
+    var swapPairIndexes = [];
+    for (let i = 0; i + 1 < shuffledIndexes.length; i += 2) {
+      swapPairIndexes.push([shuffledIndexes[i], shuffledIndexes[i + 1]]);
+    }
+    swapPairIndexes = prob.shuffle(swapPairIndexes);
 
-    renderScrambled({ audioBuffers: [scrambleBuffer] });
+    var audioBuffers: AudioBuffer[] = [];
+
+    for (let i = 0; i < swapPairIndexes.length; ++i) {
+      let pair = swapPairIndexes[i];
+      audioBuffers.push(
+        swapSegments({
+          ctx,
+          srcBuffer:
+            audioBuffers.length > 0
+              ? audioBuffers[audioBuffers.length - 1]
+              : srcAudioBuffer,
+          segmentIndexA: pair[0],
+          segmentIndexB: pair[1],
+          segmentLengthInSeconds: srcAudioBuffer.duration / state.segmentCount,
+          fadeInLengthAsSegmentPct: 5,
+          fadeOutLengthAsSegmentPct: 5,
+        })
+      );
+    }
+
+    renderScrambled({ audioBuffers });
   }
 }
 
 function wireControls({
   onFileChange,
   onSegmentChange,
-  onScrambleChange,
   onScramble,
   segmentCount,
-  scrambleRunCount,
 }) {
   segmentInput.value = segmentCount;
-  scrambleCountInput.value = scrambleRunCount;
 
   on('#file', 'change', onFileChange);
   on('#segment-count-field', 'change', onSegmentChange);
-  on('#scramble-count-field', 'change', onScrambleChange);
   on('#scramble-button', 'click', onScramble);
 }
 
 function onSegmentChange() {
   urlStore.update({ segmentCount: +segmentInput.value });
-}
-function onScrambleChange() {
-  urlStore.update({ scrambleRunCount: +scrambleCountInput.value });
 }
 
 async function onFileChange() {
