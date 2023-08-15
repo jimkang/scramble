@@ -4,3 +4,4 @@ declare module 'seedrandom';
 declare module 'probable';
 declare module '@jimkang/randomid';
 declare module '@jimkang/url-store';
+declare module 'one-listener-per-element';

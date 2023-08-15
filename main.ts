@@ -16,6 +16,13 @@ var urlStore: any;
 var fileInput: HTMLInputElement = document.getElementById(
   'file'
 ) as HTMLInputElement;
+var segmentInput: HTMLInputElement = document.getElementById(
+  'segment-count-field'
+);
+var scrambleCountInput: HTMLInputElement = document.getElementById(
+  'scramble-count-field'
+);
+var scrambleButton = document.getElementById('scramble-button');
 
 (async function go() {
   window.onerror = reportTopLevelError;
@@ -57,11 +64,21 @@ function wireControls({
   segmentCount,
   scrambleRunCount,
 }) {
+  segmentInput.value = segmentCount;
+  scrambleCountInput.value = scrambleRunCount;
+
   on('#file', 'change', onFileChange);
+  on('#segment-count-field', 'change', onSegmentChange);
+  on('#scramble-count-field', 'change', onScrambleChange);
 }
 
-function onSegmentChange() {}
-function onScrambleChange() {}
+function onSegmentChange() {
+  urlStore.update({ segmentCount: +segmentInput.value });
+}
+function onScrambleChange() {
+  urlStore.update({ scrambleRunCount: +scrambleCountInput.value });
+}
+
 function onScramble() {}
 
 async function onFileChange() {
