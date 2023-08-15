@@ -8,7 +8,18 @@
   <body>
     <div id="status-message" class="hidden"></div>
 
-    <button id="play-button">Build a node chain and play it</button>
+    <label for="file">Audio file</label>
+    <input id="file" class="input-source" type="file" accept="audio/*, .m4a,.ogg,.mp3,.wav" />
+    <div class="source-audio-container">
+      <audio class="source-audio-player" controls></audio>
+    </div>
+
+    <label for="segment-count-field">Number of segments to scramble into:</label>
+    <input id="segment-count-field" type="text"></input>
+    <label for="scramble-count-field">Number of times to scramble:</label>
+    <input id="scramble-count-field" type="text"></input>
+
+    <button id="scramble-button">Scramble</button>
 
     <div id="version-info"></div>
 
