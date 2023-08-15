@@ -8,9 +8,15 @@ import { createProbable as Probable } from 'probable';
 import OLPE from 'one-listener-per-element';
 import { getAudioBufferFromFile } from 'synthskel/tasks/get-audio-buffer-from-file';
 import { renderResultAudio } from './renderers/render-result-audio';
+import { renderScrambled } from './renderers/render-scrambled';
+import { swapSegments } from './tasks/scramble';
+import ContextKeeper from 'audio-context-singleton';
 
 var randomId = RandomId();
 var { on } = OLPE();
+var { getCurrentContext } = ContextKeeper();
+
+// Ephemeral state
 var prob: any;
 var urlStore: any;
 var fileInput: HTMLInputElement = document.getElementById(
@@ -18,11 +24,12 @@ var fileInput: HTMLInputElement = document.getElementById(
 ) as HTMLInputElement;
 var segmentInput: HTMLInputElement = document.getElementById(
   'segment-count-field'
-);
+) as HTMLInputElement;
 var scrambleCountInput: HTMLInputElement = document.getElementById(
   'scramble-count-field'
-);
+) as HTMLInputElement;
 var scrambleButton = document.getElementById('scramble-button');
+var srcAudioBuffer;
 
 (async function go() {
   window.onerror = reportTopLevelError;
@@ -54,6 +61,28 @@ async function onUpdate(
       state
     )
   );
+
+  async function onScramble() {
+    if (!srcAudioBuffer) {
+      throw new Error('No source audio to scramble.');
+    }
+
+    var ctx = await new Promise((resolve, reject) =>
+      getCurrentContext((error, ctx) => (error ? reject(error) : resolve(ctx)))
+    );
+
+    var scrambleBuffer = swapSegments({
+      ctx,
+      srcBuffer: srcAudioBuffer,
+      segmentIndexA: 0,
+      segmentIndexB: 1,
+      segmentLengthInSeconds: srcAudioBuffer.duration / state.segmentCount,
+      fadeInLengthAsSegmentPct: 5,
+      fadeOutLengthAsSegmentPct: 5,
+    });
+
+    renderScrambled({ audioBuffers: [scrambleBuffer] });
+  }
 }
 
 function wireControls({
@@ -70,6 +99,7 @@ function wireControls({
   on('#file', 'change', onFileChange);
   on('#segment-count-field', 'change', onSegmentChange);
   on('#scramble-count-field', 'change', onScrambleChange);
+  on('#scramble-button', 'click', onScramble);
 }
 
 function onSegmentChange() {
@@ -79,20 +109,19 @@ function onScrambleChange() {
   urlStore.update({ scrambleRunCount: +scrambleCountInput.value });
 }
 
-function onScramble() {}
-
 async function onFileChange() {
   if (!fileInput?.files?.length) {
     return;
   }
 
   try {
-    var audioBuffer = await getAudioBufferFromFile({
+    srcAudioBuffer = await getAudioBufferFromFile({
       file: fileInput.files[0],
     });
+    // TODO: Impl. urlStore ephemeral state, put it thes.
 
     renderResultAudio({
-      audioBuffer,
+      audioBuffer: srcAudioBuffer,
       containerSelector: '.source-audio-container',
     });
   } catch (error) {

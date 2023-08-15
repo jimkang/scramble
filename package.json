@@ -16,7 +16,10 @@
   "dependencies": {
     "@jimkang/randomid": "^1.1.0",
     "@jimkang/url-store": "^1.0.3",
+    "audio-context-singleton": "^1.2.4",
     "audiobuffer-to-wav": "^1.0.0",
+    "d3-array": "^3.2.4",
+    "d3-ease": "^3.0.1",
     "d3-selection": "^3.0.0",
     "handle-error-web": "^1.0.1",
     "one-listener-per-element": "^1.0.1",
